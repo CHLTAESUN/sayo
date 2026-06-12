@@ -78,7 +78,30 @@ begin
 end;
 $$;
 
--- 4) 도배 방지: 분당 작성 횟수 제한 (서버 측 rate limit) --------------------
+-- 4) 아이디(@핸들) 변경: 14일에 한 번만 (서버가 강제) -----------------------
+alter table public.profiles add column if not exists handle_changed_at timestamptz;
+
+create or replace function public.enforce_handle_cooldown()
+returns trigger language plpgsql as $$
+begin
+  if new.handle is distinct from old.handle then
+    if old.handle_changed_at is not null and old.handle_changed_at > now() - interval '14 days' then
+      raise exception '아이디는 14일에 한 번만 변경할 수 있어요.';
+    end if;
+    new.handle_changed_at := now();
+  else
+    -- 핸들을 안 바꾸면서 변경 시각만 조작하는 꼼수 차단
+    new.handle_changed_at := old.handle_changed_at;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists handle_cooldown on public.profiles;
+create trigger handle_cooldown before update on public.profiles
+  for each row execute function public.enforce_handle_cooldown();
+
+-- 5) 도배 방지: 분당 작성 횟수 제한 (서버 측 rate limit) --------------------
 create or replace function public.enforce_rate_limit()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare

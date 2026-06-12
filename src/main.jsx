@@ -229,6 +229,7 @@ function App() {
   const [editBio, setEditBio] = useState('');
   const [editColor, setEditColor] = useState('#65c6ba');
   const [settingsError, setSettingsError] = useState('');
+  const [editHandle, setEditHandle] = useState('');
   const [tickerIndex, setTickerIndex] = useState(0);
 
   useEffect(() => {
@@ -290,7 +291,7 @@ function App() {
     const uid = session?.user?.id;
     loadPosts(uid);
     if (uid) {
-      supabase.from('profiles').select('handle, display_name, avatar_color, bio').eq('id', uid).single()
+      supabase.from('profiles').select('*').eq('id', uid).single()
         .then(({ data }) => setProfile(data));
     } else {
       setProfile(null);
@@ -405,10 +406,18 @@ function App() {
 
   const avatarColors = ['#0f9f91', '#65c6ba', '#e8a13a', '#d96c6c', '#7d8fd9', '#9a6cd9', '#5aa45a', '#4a4a52'];
 
+  // 아이디 변경 쿨다운: 마지막 변경 후 14일. 남은 일수(변경 가능하면 0).
+  const handleCooldownDays = (() => {
+    if (!profile?.handle_changed_at) return 0;
+    const elapsed = Date.now() - new Date(profile.handle_changed_at).getTime();
+    return Math.max(0, Math.ceil(14 - elapsed / 86400000));
+  })();
+
   const openSettings = () => {
     setEditName(profile?.display_name || '');
     setEditBio(profile?.bio || '');
     setEditColor(profile?.avatar_color || '#65c6ba');
+    setEditHandle(profile?.handle || '');
     setSettingsError('');
     setAccountMenuOpen(false);
     setSettingsOpen(true);
@@ -417,11 +426,25 @@ function App() {
   const saveSettings = async () => {
     const name = editName.trim();
     if (!name) return;
-    const { error } = await supabase.from('profiles')
-      .update({ display_name: name, bio: editBio.trim() || null, avatar_color: editColor })
-      .eq('id', session.user.id);
-    if (error) { setSettingsError('저장하지 못했어요. 잠시 후 다시 시도해주세요.'); return; }
-    setProfile((p) => ({ ...p, display_name: name, bio: editBio.trim(), avatar_color: editColor }));
+    const nextHandle = editHandle.trim().toLowerCase().replace(/^@/, '');
+    const handleChanged = nextHandle !== profile?.handle;
+    if (handleChanged && !/^[a-z0-9_]{3,20}$/.test(nextHandle)) {
+      setSettingsError('아이디는 영소문자/숫자/_ 3~20자만 쓸 수 있어요.');
+      return;
+    }
+    const payload = { display_name: name, bio: editBio.trim() || null, avatar_color: editColor };
+    if (handleChanged) payload.handle = nextHandle;
+    const { error } = await supabase.from('profiles').update(payload).eq('id', session.user.id);
+    if (error) {
+      if (/14일/.test(error.message)) setSettingsError('아이디는 14일에 한 번만 변경할 수 있어요.');
+      else if (/duplicate|unique/i.test(error.message)) setSettingsError('이미 사용 중인 아이디예요.');
+      else setSettingsError('저장하지 못했어요. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    setProfile((p) => ({
+      ...p, display_name: name, bio: editBio.trim(), avatar_color: editColor,
+      ...(handleChanged ? { handle: nextHandle, handle_changed_at: new Date().toISOString() } : {}),
+    }));
     setSettingsError('');
     setSettingsOpen(false);
   };
@@ -763,7 +786,14 @@ function App() {
               <h2>프로필 설정</h2>
               <button className="icon-btn" onClick={() => setSettingsOpen(false)} aria-label="설정 닫기"><X size={18} /></button>
             </div>
-            <p className="settings-handle">@{profile?.handle} · 아이디는 변경할 수 없어요</p>
+            <label>아이디
+              <input value={editHandle} onChange={(e) => setEditHandle(e.target.value)} maxLength={21} placeholder="아이디" disabled={handleCooldownDays > 0} />
+            </label>
+            <p className="settings-handle">
+              {handleCooldownDays > 0
+                ? `아이디는 14일에 한 번만 바꿀 수 있어요. ${handleCooldownDays}일 후 변경 가능.`
+                : '영소문자/숫자/_ 3~20자 · 변경하면 14일간 다시 못 바꿔요.'}
+            </p>
             <label>표시 이름<input value={editName} onChange={(e) => setEditName(e.target.value)} maxLength={30} placeholder="이름" /></label>
             <label>소개<textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} maxLength={300} rows={3} placeholder="나를 한 줄로 소개해보세요" /></label>
             <div className="settings-colors">

@@ -10,7 +10,11 @@
 - **별도 프로젝트:** 데스크탑 `웹사이트 만들기`(담월상점 Astro)와 **무관**
 - **성격:** 현재는 **로컬 프로토타입**. 실제 서비스 아님. 계정/세션은 `localStorage`, 게시물은 컴포넌트 state(새로고침 시 사라짐)
 - **디자인:** 밝은 민트 배경(`#f8fbfa`), 청록 브랜드(`--sayo: #0f9f91`), Noto Sans KR. 모임 기능 없음
-- **git:** **아직 없음** (init + 첫 커밋이 열린 작업)
+- **git:** GitHub 공개 repo **CHLTAESUN/sayo**에 push 완료. `git pull`→작업→`git push`(=발행).
+- **라이브(발행됨):** https://chltaesun.github.io/sayo/ — GitHub Pages 자동배포. **main에 push하면 자동 재배포**(`.github/workflows/deploy.yml`).
+  - `vite.config.js` base: 빌드 시 `/sayo/`, 로컬 dev는 `/`(그대로 5173).
+  - 배포 빌드의 Supabase 키는 **GitHub Actions 시크릿**(`VITE_SUPABASE_URL`/`VITE_SUPABASE_PUBLISHABLE_KEY`)으로 주입. `.env`는 로컬 전용(gitignore).
+  - ⚠️ **열린 작업:** Supabase 대시보드 Auth→URL Configuration에 `https://chltaesun.github.io/sayo/` 등록해야 라이브 사이트 가입/로그인 리다이렉트 정상.
 
 ## 2. 스택 / 실행
 

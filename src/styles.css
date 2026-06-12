@@ -74,6 +74,18 @@ h1, h2, p { margin-top: 0; }
 .account-menu button { display: flex; align-items: center; gap: 7px; border: 0; background: none; cursor: pointer; padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #444; white-space: nowrap; }
 .account-menu button:hover { background: #f1f1f2; }
 
+.settings-card { width: min(420px, 100%); display: grid; gap: 13px; padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 0 24px 70px rgba(20,60,55,.22); }
+.settings-head { display: flex; align-items: center; justify-content: space-between; }
+.settings-head h2 { font-size: 17px; }
+.settings-handle { color: var(--muted); font-size: 12px; margin-top: -8px; }
+.settings-card label { display: grid; gap: 6px; font-size: 12px; font-weight: 700; color: #555; }
+.settings-card input, .settings-card textarea { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 13px; resize: vertical; }
+.settings-card input:focus, .settings-card textarea:focus { outline: 2px solid var(--sayo); border-color: transparent; }
+.settings-colors { display: grid; gap: 7px; font-size: 12px; font-weight: 700; color: #555; }
+.settings-colors > div { display: flex; gap: 8px; }
+.settings-colors button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+.settings-colors button.selected { border-color: #1b1b1f; box-shadow: 0 0 0 2px #fff inset; }
+
 .feed-tabs { display: flex; gap: 23px; margin: 24px 2px 14px; border-bottom: 1px solid var(--line); }
 .feed-tabs button { border: 0; padding: 0 0 12px; color: #aaa9ad; background: none; cursor: pointer; font-size: 13px; font-weight: 600; }
 .feed-tabs .selected { color: var(--sayo-dark); border-bottom: 2px solid var(--sayo); }

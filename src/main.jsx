@@ -224,6 +224,11 @@ function App() {
   const [photo, setPhoto] = useState('');
   const [moodOpen, setMoodOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [editColor, setEditColor] = useState('#65c6ba');
+  const [settingsError, setSettingsError] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -279,7 +284,7 @@ function App() {
     const uid = session?.user?.id;
     loadPosts(uid);
     if (uid) {
-      supabase.from('profiles').select('handle, display_name, avatar_color').eq('id', uid).single()
+      supabase.from('profiles').select('handle, display_name, avatar_color, bio').eq('id', uid).single()
         .then(({ data }) => setProfile(data));
     } else {
       setProfile(null);
@@ -368,10 +373,15 @@ function App() {
   };
 
   const loginLocalAccount = async () => {
-    const gated = await gateAuth({ action: 'login', email: loginEmail, password: loginPassword });
+    const identifier = loginEmail.trim();
+    const gated = await gateAuth({ action: 'login', email: identifier, password: loginPassword });
     if (gated.fallback) {
-      // 검문소 미배포 시 기존 직접 로그인
-      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
+      // 검문소 미배포 시 기존 직접 로그인 (아이디 로그인은 검문소가 필요)
+      if (!identifier.includes('@')) {
+        setAuthError('아이디 로그인은 준비 중이에요. 이메일로 로그인해주세요.');
+        return;
+      }
+      const { error } = await supabase.auth.signInWithPassword({ email: identifier, password: loginPassword });
       if (error) {
         setAuthError('이메일 또는 비밀번호가 일치하지 않습니다.');
         return;
@@ -385,6 +395,29 @@ function App() {
     }
     setAuthError('');
     setAuthOpen(false);
+  };
+
+  const avatarColors = ['#0f9f91', '#65c6ba', '#e8a13a', '#d96c6c', '#7d8fd9', '#9a6cd9', '#5aa45a', '#4a4a52'];
+
+  const openSettings = () => {
+    setEditName(profile?.display_name || '');
+    setEditBio(profile?.bio || '');
+    setEditColor(profile?.avatar_color || '#65c6ba');
+    setSettingsError('');
+    setAccountMenuOpen(false);
+    setSettingsOpen(true);
+  };
+
+  const saveSettings = async () => {
+    const name = editName.trim();
+    if (!name) return;
+    const { error } = await supabase.from('profiles')
+      .update({ display_name: name, bio: editBio.trim() || null, avatar_color: editColor })
+      .eq('id', session.user.id);
+    if (error) { setSettingsError('저장하지 못했어요. 잠시 후 다시 시도해주세요.'); return; }
+    setProfile((p) => ({ ...p, display_name: name, bio: editBio.trim(), avatar_color: editColor }));
+    setSettingsError('');
+    setSettingsOpen(false);
   };
 
   const logout = async () => {
@@ -445,6 +478,7 @@ function App() {
                 <button className="icon-btn" onClick={() => setAccountMenuOpen((v) => !v)} aria-label="설정"><Settings size={18} /></button>
                 {accountMenuOpen ? (
                   <div className="account-menu">
+                    <button onClick={openSettings}><UserRound size={15} /> 프로필 설정</button>
                     <button onClick={() => { setAccountMenuOpen(false); logout(); }}><LogOut size={15} /> 로그아웃</button>
                   </div>
                 ) : null}
@@ -702,6 +736,30 @@ function App() {
         </div>
       ) : null}
 
+      {settingsOpen ? (
+        <div className="search-backdrop" onClick={() => setSettingsOpen(false)}>
+          <div className="settings-card" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-head">
+              <h2>프로필 설정</h2>
+              <button className="icon-btn" onClick={() => setSettingsOpen(false)} aria-label="설정 닫기"><X size={18} /></button>
+            </div>
+            <p className="settings-handle">@{profile?.handle} · 아이디는 변경할 수 없어요</p>
+            <label>표시 이름<input value={editName} onChange={(e) => setEditName(e.target.value)} maxLength={30} placeholder="이름" /></label>
+            <label>소개<textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} maxLength={300} rows={3} placeholder="나를 한 줄로 소개해보세요" /></label>
+            <div className="settings-colors">
+              <span>아바타 색</span>
+              <div>
+                {avatarColors.map((color) => (
+                  <button key={color} className={editColor === color ? 'selected' : ''} style={{ background: color }} onClick={() => setEditColor(color)} aria-label={`아바타 색 ${color}`} />
+                ))}
+              </div>
+            </div>
+            {settingsError ? <p className="auth-error">{settingsError}</p> : null}
+            <button className="auth-primary" disabled={!editName.trim()} onClick={saveSettings}>저장</button>
+          </div>
+        </div>
+      ) : null}
+
       {authOpen ? (
         <div className="auth-backdrop">
           <section className="auth-card">
@@ -716,7 +774,7 @@ function App() {
 
             {authMode === 'login' ? (
               <div className="auth-form">
-                <label>이메일<input value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} type="email" placeholder="name@example.com" /></label>
+                <label>이메일 또는 아이디<input value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="name@example.com 또는 아이디" /></label>
                 <label>비밀번호<input value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} type="password" placeholder="비밀번호" /></label>
                 {authError ? <p className="auth-error">{authError}</p> : null}
                 <button className="auth-primary" onClick={loginLocalAccount}>로그인</button>

@@ -72,10 +72,18 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   }
 
-  // ③ 로그인: 서버에서 검증 후 세션을 돌려준다
+  // ③ 로그인: 이메일 또는 아이디(@핸들) 허용. 아이디→이메일 변환은 서버에서만(이메일 비공개 유지).
   if (action === 'login') {
-    const { data, error } = await anon.auth.signInWithPassword({ email, password });
-    if (error) return json({ error: '이메일 또는 비밀번호가 일치하지 않습니다.' }, 400);
+    let loginEmail = email.trim();
+    if (!loginEmail.includes('@')) {
+      const handleInput = loginEmail.toLowerCase().replace(/^@/, '');
+      const { data: prof } = await admin.from('profiles').select('id').eq('handle', handleInput).single();
+      const { data: u } = prof ? await admin.auth.admin.getUserById(prof.id) : { data: null };
+      loginEmail = u?.user?.email ?? '';
+      if (!loginEmail) return json({ error: '아이디 또는 비밀번호가 일치하지 않습니다.' }, 400);
+    }
+    const { data, error } = await anon.auth.signInWithPassword({ email: loginEmail, password });
+    if (error) return json({ error: '아이디 또는 비밀번호가 일치하지 않습니다.' }, 400);
     return json({ session: data.session });
   }
 

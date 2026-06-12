@@ -85,6 +85,17 @@ h1, h2, p { margin-top: 0; }
 .settings-colors > div { display: flex; gap: 8px; }
 .settings-colors button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
 .settings-colors button.selected { border-color: #1b1b1f; box-shadow: 0 0 0 2px #fff inset; }
+.settings-logout { display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; background: none; cursor: pointer; padding: 8px; color: #b05050; font-size: 12px; font-weight: 700; }
+.settings-logout:hover { text-decoration: underline; }
+
+.mobile-header-actions { display: flex; align-items: center; gap: 2px; }
+
+.live-ticker { display: flex; align-items: center; gap: 10px; width: 100%; margin: 18px 0 -6px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; overflow: hidden; text-align: left; }
+.live-badge { flex-shrink: 0; padding: 3px 8px; border-radius: 7px; background: var(--sayo); color: #fff; font-size: 10px; font-weight: 800; letter-spacing: 1px; }
+.ticker-item { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 12px; font-weight: 600; color: #333; animation: ticker-up .45s ease; white-space: nowrap; overflow: hidden; }
+.ticker-item b { color: var(--sayo-dark); font-size: 13px; }
+.ticker-item small { color: var(--muted); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+@keyframes ticker-up { from { transform: translateY(120%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 .feed-tabs { display: flex; gap: 23px; margin: 24px 2px 14px; border-bottom: 1px solid var(--line); }
 .feed-tabs button { border: 0; padding: 0 0 12px; color: #aaa9ad; background: none; cursor: pointer; font-size: 13px; font-weight: 600; }

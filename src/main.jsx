@@ -229,6 +229,12 @@ function App() {
   const [editBio, setEditBio] = useState('');
   const [editColor, setEditColor] = useState('#65c6ba');
   const [settingsError, setSettingsError] = useState('');
+  const [tickerIndex, setTickerIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTickerIndex((i) => (i + 1) % popularPosts.length), 3000);
+    return () => clearInterval(timer);
+  }, []);
   const [chatOpen, setChatOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -489,7 +495,13 @@ function App() {
       </aside>
 
       <main className="feed">
-        <header className="mobile-header"><div className="brand"><span>S</span>SAYO</div><button className="icon-btn" onClick={openSearch} aria-label="검색"><Search /></button></header>
+        <header className="mobile-header">
+          <div className="brand"><span>S</span>SAYO</div>
+          <div className="mobile-header-actions">
+            <button className="icon-btn" onClick={openSearch} aria-label="검색"><Search /></button>
+            <button className="icon-btn" onClick={() => (session ? openSettings() : setAuthOpen(true))} aria-label="설정"><Settings /></button>
+          </div>
+        </header>
         <div className="feed-title">
           <div><h1>{view.title}</h1><p>{view.subtitle}</p></div>
           <button className="search-button" onClick={openSearch}><Search size={19} /> 이야기와 사람 찾기</button>
@@ -519,6 +531,14 @@ function App() {
             </div>
           </div>
         </section>
+
+        <button className="live-ticker" onClick={() => setActiveNav('둘러보기')} aria-label="실시간 인기 게시물 보기">
+          <span className="live-badge">실시간</span>
+          <span className="ticker-item" key={tickerIndex}>
+            <b>{tickerIndex + 1}</b> {popularPosts[tickerIndex].topic}
+            <small>{popularPosts[tickerIndex].author} · 답글 {popularPosts[tickerIndex].replies}</small>
+          </span>
+        </button>
 
         <div className="feed-tabs">
           {['추천', '팔로잉', '최신'].map((tab) => (
@@ -756,6 +776,7 @@ function App() {
             </div>
             {settingsError ? <p className="auth-error">{settingsError}</p> : null}
             <button className="auth-primary" disabled={!editName.trim()} onClick={saveSettings}>저장</button>
+            <button className="settings-logout" onClick={() => { setSettingsOpen(false); logout(); }}><LogOut size={14} /> 로그아웃</button>
           </div>
         </div>
       ) : null}

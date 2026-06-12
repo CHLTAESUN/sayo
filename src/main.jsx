@@ -199,9 +199,6 @@ function App() {
   const [authMode, setAuthMode] = useState('signup');
   const [signupStep, setSignupStep] = useState(1);
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [emailChallenge, setEmailChallenge] = useState('');
-  const [emailVerified, setEmailVerified] = useState(false);
   const [identityVerified, setIdentityVerified] = useState(false);
   const [identityChallenge, setIdentityChallenge] = useState('');
   const [identityInput, setIdentityInput] = useState('');
@@ -346,36 +343,10 @@ function App() {
 
   const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  const issueEmailChallenge = () => {
-    if (!emailIsValid) {
-      setAuthError('올바른 이메일 주소를 입력해주세요.');
-      return;
-    }
-    setEmailChallenge(String(Math.floor(100000 + Math.random() * 900000)));
-    setCode('');
-    setEmailVerified(false);
-    setAuthError('');
-  };
-
-  const resetEmailVerification = () => {
-    setEmailVerified(false);
-    setEmailChallenge('');
-    setCode('');
-  };
-
   const resetIdentityVerification = () => {
     setIdentityVerified(false);
     setIdentityChallenge('');
     setIdentityInput('');
-  };
-
-  const verifyEmailChallenge = () => {
-    if (code === emailChallenge && emailChallenge) {
-      setEmailVerified(true);
-      setAuthError('');
-      return;
-    }
-    setAuthError('이메일 인증번호가 일치하지 않습니다.');
   };
 
   const verifyIdentityChallenge = () => {
@@ -731,17 +702,11 @@ function App() {
                 {signupStep === 1 ? (
                   <>
                     <h2>본인 확인을 진행해요</h2>
-                    {emailVerified ? (
-                      <div className="verified-summary"><div><strong>이메일 인증 완료</strong><span>{email}</span></div><button onClick={resetEmailVerification}>변경</button></div>
-                    ) : (
-                      <div className="verification-block">
-                        <label>이메일<input value={email} onChange={(e) => { setEmail(e.target.value); setEmailVerified(false); }} type="email" placeholder="name@example.com" /></label>
-                        {email && !emailIsValid ? <p className="field-error">이메일 형식이 올바르지 않습니다.</p> : null}
-                        <button className="inline-auth-button" disabled={!emailIsValid} onClick={issueEmailChallenge}>{emailChallenge ? '인증번호 다시 발급' : '이메일 인증번호 발급'}</button>
-                        {emailChallenge ? <div className="local-code">로컬 이메일 인증번호 <strong>{emailChallenge}</strong></div> : null}
-                        {emailChallenge ? <div className="identity-entry"><input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} inputMode="numeric" maxLength={6} placeholder="이메일 인증번호 6자리 입력" /><button disabled={code.length !== 6} onClick={verifyEmailChallenge}>이메일 인증번호 확인</button></div> : null}
-                      </div>
-                    )}
+                    <div className="verification-block">
+                      <label>이메일<input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="name@example.com" /></label>
+                      {email && !emailIsValid ? <p className="field-error">이메일 형식이 올바르지 않습니다.</p> : null}
+                      <p className="auth-note">가입 완료 후 이 주소로 확인 메일이 발송됩니다. 메일의 링크를 눌러야 로그인할 수 있어요.</p>
+                    </div>
                     {identityVerified ? (
                       <div className="verified-summary"><div><strong>본인확인 완료</strong><span>로컬 테스트 본인확인</span></div><button onClick={resetIdentityVerification}>다시 인증</button></div>
                     ) : (
@@ -757,12 +722,12 @@ function App() {
                     {authError ? <p className="auth-error">{authError}</p> : null}
                     <p className="auth-note">이 인증은 로컬 테스트 전용이며 실제 한국인 본인인증이 아닙니다. 운영 배포 전 PASS 본인확인기관을 연결해야 합니다.</p>
                     <div className="verification-status">
-                      <span className={emailVerified ? 'done' : ''}>{emailVerified ? '✓' : '1'} 이메일 인증</span>
+                      <span className={emailIsValid ? 'done' : ''}>{emailIsValid ? '✓' : '1'} 이메일 입력</span>
                       <span className={identityVerified ? 'done' : ''}>{identityVerified ? '✓' : '2'} 본인확인</span>
                     </div>
-                    {!emailVerified || !identityVerified ? <p className="auth-requirement">두 인증을 모두 완료하면 다음 단계로 이동할 수 있습니다.</p> : null}
-                    <button className="auth-primary" disabled={!emailVerified || !identityVerified} onClick={() => setSignupStep(2)}>
-                      {!emailVerified ? '이메일 인증 필요' : !identityVerified ? '본인확인 필요' : '다음'}
+                    {!emailIsValid || !identityVerified ? <p className="auth-requirement">이메일 입력과 본인확인을 완료하면 다음 단계로 이동할 수 있습니다.</p> : null}
+                    <button className="auth-primary" disabled={!emailIsValid || !identityVerified} onClick={() => setSignupStep(2)}>
+                      {!emailIsValid ? '이메일 입력 필요' : !identityVerified ? '본인확인 필요' : '다음'}
                     </button>
                   </>
                 ) : null}

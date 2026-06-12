@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Bell, Bookmark, Camera, Compass, Home, ImagePlus, MessageCircle,
-  MoreHorizontal, Plus, Quote, Repeat2, Search, Send, Settings, Share2, Smile, Star, UserRound, X,
+  LogOut, MoreHorizontal, Plus, Quote, Repeat2, Search, Send, Settings, Share2, Smile, Star, UserRound, X,
 } from 'lucide-react';
 import './styles.css';
 import { supabase } from './lib/supabase';
@@ -223,6 +223,7 @@ function App() {
   const [feedTab, setFeedTab] = useState('추천');
   const [photo, setPhoto] = useState('');
   const [moodOpen, setMoodOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -439,7 +440,16 @@ function App() {
           <Avatar person={{ name: profile?.display_name || '게스트', color: profile?.avatar_color || '#65c6ba', online: true }} size={40} />
           <div><strong>{profile?.display_name || '게스트'}</strong><span>{profile ? '@' + profile.handle : '로그인 필요'}</span></div>
           {session
-            ? <button className="icon-btn" onClick={logout} aria-label="로그아웃"><Settings size={18} /></button>
+            ? (
+              <div className="account-menu-wrap">
+                <button className="icon-btn" onClick={() => setAccountMenuOpen((v) => !v)} aria-label="설정"><Settings size={18} /></button>
+                {accountMenuOpen ? (
+                  <div className="account-menu">
+                    <button onClick={() => { setAccountMenuOpen(false); logout(); }}><LogOut size={15} /> 로그아웃</button>
+                  </div>
+                ) : null}
+              </div>
+            )
             : <button className="icon-btn" onClick={() => setAuthOpen(true)} aria-label="로그인"><Settings size={18} /></button>}
         </div>
       </aside>

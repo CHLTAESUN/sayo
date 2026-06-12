@@ -69,6 +69,11 @@ h1, h2, p { margin-top: 0; }
 .mood-popover button { font-size: 19px; padding: 4px 5px; line-height: 1; }
 .mood-popover button:hover { background: #f1f1f2; }
 
+.account-menu-wrap { position: relative; display: flex; }
+.account-menu { position: absolute; bottom: calc(100% + 6px); right: 0; padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 11px; box-shadow: 0 8px 24px rgba(0,0,0,.1); z-index: 20; }
+.account-menu button { display: flex; align-items: center; gap: 7px; border: 0; background: none; cursor: pointer; padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #444; white-space: nowrap; }
+.account-menu button:hover { background: #f1f1f2; }
+
 .feed-tabs { display: flex; gap: 23px; margin: 24px 2px 14px; border-bottom: 1px solid var(--line); }
 .feed-tabs button { border: 0; padding: 0 0 12px; color: #aaa9ad; background: none; cursor: pointer; font-size: 13px; font-weight: 600; }
 .feed-tabs .selected { color: var(--sayo-dark); border-bottom: 2px solid var(--sayo); }

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import './styles.css';
 import { supabase } from './lib/supabase';
+import { gateAuth } from './lib/authGate';
 
 const navItems = [
   { label: '홈', icon: Home },
@@ -322,12 +323,19 @@ function App() {
   };
 
   const completeSignup = async () => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { handle: newHandle, display_name: newName } },
-    });
-    if (error) { setAuthError(error.message); return; }
+    const gated = await gateAuth({ action: 'signup', email, password, handle: newHandle, display_name: newName });
+    if (gated.fallback) {
+      // 검문소 미배포 시 기존 직접 가입
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { handle: newHandle, display_name: newName } },
+      });
+      if (error) { setAuthError(error.message); return; }
+    } else if (gated.error) {
+      setAuthError(gated.error);
+      return;
+    }
     setAuthError('');
     setAuthOpen(false);
     setSignupStep(1);
@@ -359,10 +367,20 @@ function App() {
   };
 
   const loginLocalAccount = async () => {
-    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
-    if (error) {
-      setAuthError('이메일 또는 비밀번호가 일치하지 않습니다.');
+    const gated = await gateAuth({ action: 'login', email: loginEmail, password: loginPassword });
+    if (gated.fallback) {
+      // 검문소 미배포 시 기존 직접 로그인
+      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
+      if (error) {
+        setAuthError('이메일 또는 비밀번호가 일치하지 않습니다.');
+        return;
+      }
+    } else if (gated.error) {
+      setAuthError(gated.error);
       return;
+    } else if (gated.session) {
+      const { error } = await supabase.auth.setSession(gated.session);
+      if (error) { setAuthError('로그인 처리 중 문제가 발생했습니다.'); return; }
     }
     setAuthError('');
     setAuthOpen(false);

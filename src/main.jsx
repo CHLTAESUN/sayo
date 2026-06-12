@@ -1,10 +1,11 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Bell, Bookmark, Camera, Compass, Home, ImagePlus, MessageCircle,
-  MoreHorizontal, Plus, Quote, Repeat2, Search, Send, Settings, Smile, Star, UserRound, X,
+  MoreHorizontal, Plus, Quote, Repeat2, Search, Send, Settings, Share2, Smile, Star, UserRound, X,
 } from 'lucide-react';
 import './styles.css';
+import { supabase } from './lib/supabase';
 
 const navItems = [
   { label: '홈', icon: Home },
@@ -114,16 +115,14 @@ function FollowButton() {
   );
 }
 
-function Post({ author, time, text, image, initialLikes, initialReplies = [], repostedBy, quoted, onQuote }) {
+function Post({ author, time, text, image, initialLikes, initialReplies = [], repostedBy, quoted }) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [reposted, setReposted] = useState(false);
+  const [shared, setShared] = useState(false);
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [replies, setReplies] = useState(initialReplies);
   const [showAllReplies, setShowAllReplies] = useState(false);
-  const [showQuote, setShowQuote] = useState(false);
-  const [quoteText, setQuoteText] = useState('');
 
   const addReply = () => {
     if (!replyText.trim()) return;
@@ -132,11 +131,16 @@ function Post({ author, time, text, image, initialLikes, initialReplies = [], re
     setShowReply(false);
   };
 
-  const submitQuote = () => {
-    if (!quoteText.trim()) return;
-    onQuote?.({ comment: quoteText.trim(), quotedName: author.name, quotedText: text });
-    setQuoteText('');
-    setShowQuote(false);
+  const sharePost = async () => {
+    if (navigator.share) {
+      try { await navigator.share({ title: 'SAYO', text }); } catch {}
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setShared(true);
+      setTimeout(() => setShared(false), 1500);
+    } catch {}
   };
 
   return (
@@ -158,8 +162,7 @@ function Post({ author, time, text, image, initialLikes, initialReplies = [], re
           <Star size={20} fill={liked ? 'currentColor' : 'none'} /> {initialLikes + (liked ? 1 : 0)}
         </button>
         <button className="action" onClick={() => setShowReply(!showReply)}><MessageCircle size={20} /> {replies.length || '답글'}</button>
-        <button className={reposted ? 'action reposted' : 'action'} onClick={() => setReposted(!reposted)}><Repeat2 size={20} /> {reposted ? '다시 나눔' : '재게시'}</button>
-        <button className={showQuote ? 'action reposted' : 'action'} onClick={() => setShowQuote(!showQuote)}><Quote size={18} /> 인용</button>
+        <button className={shared ? 'action saved' : 'action'} onClick={sharePost}><Share2 size={19} /> {shared ? '복사됨' : '공유'}</button>
         <button className={saved ? 'action saved' : 'action'} onClick={() => setSaved(!saved)} aria-label="저장">
           <Bookmark size={20} fill={saved ? 'currentColor' : 'none'} />
         </button>
@@ -184,19 +187,15 @@ function Post({ author, time, text, image, initialLikes, initialReplies = [], re
           <button onClick={addReply}>답글</button>
         </div>
       ) : null}
-      {showQuote ? (
-        <div className="quote-box">
-          <div className="quote-card"><strong>{author.name}</strong><p>{text}</p></div>
-          <textarea value={quoteText} onChange={(e) => setQuoteText(e.target.value)} placeholder="생각을 더해 인용하기" />
-          <button onClick={submitQuote}>인용 게시</button>
-        </div>
-      ) : null}
     </article>
   );
 }
 
 function App() {
-  const [authOpen, setAuthOpen] = useState(() => !localStorage.getItem('sayo-local-session'));
+  const [authOpen, setAuthOpen] = useState(false);
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [dbPosts, setDbPosts] = useState([]);
   const [authMode, setAuthMode] = useState('signup');
   const [signupStep, setSignupStep] = useState(1);
   const [email, setEmail] = useState('');
@@ -223,7 +222,6 @@ function App() {
   const [messages, setMessages] = useState(initialMessages);
   const [messageText, setMessageText] = useState('');
   const [postText, setPostText] = useState('');
-  const [localPosts, setLocalPosts] = useState([]);
   const [feedTab, setFeedTab] = useState('추천');
   const [photo, setPhoto] = useState('');
   const [moodOpen, setMoodOpen] = useState(false);
@@ -233,6 +231,61 @@ function App() {
   const fileRef = useRef(null);
 
   const currentMessages = useMemo(() => messages[selectedPerson.id] || [], [messages, selectedPerson]);
+
+  const timeAgo = (iso) => {
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 60) return '방금';
+    if (diff < 3600) return `${Math.floor(diff / 60)}분`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}시간`;
+    return `${Math.floor(diff / 86400)}일`;
+  };
+
+  const loadPosts = async (uid) => {
+    const { data } = await supabase
+      .from('posts')
+      .select('id, body, image_url, created_at, author_id, profiles(handle, display_name, avatar_color)')
+      .order('created_at', { ascending: false });
+    if (!data) return;
+    setDbPosts(data.map((row) => ({
+      id: row.id,
+      authorId: row.author_id,
+      own: uid && row.author_id === uid,
+      follows: false,
+      author: {
+        name: row.profiles?.display_name || '사용자',
+        handle: '@' + (row.profiles?.handle || 'user'),
+        color: row.profiles?.avatar_color || '#65c6ba',
+      },
+      time: timeAgo(row.created_at),
+      text: row.body,
+      image: row.image_url || '',
+      initialLikes: 0,
+      initialReplies: [],
+    })));
+  };
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setAuthOpen(!data.session);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+      setSession(next);
+      if (next) setAuthOpen(false);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const uid = session?.user?.id;
+    loadPosts(uid);
+    if (uid) {
+      supabase.from('profiles').select('handle, display_name, avatar_color').eq('id', uid).single()
+        .then(({ data }) => setProfile(data));
+    } else {
+      setProfile(null);
+    }
+  }, [session]);
 
   const sendMessage = () => {
     const value = messageText.trim();
@@ -244,17 +297,19 @@ function App() {
     setMessageText('');
   };
 
-  const publishPost = () => {
+  const publishPost = async () => {
     const value = postText.trim();
     if (!value && !photo) return;
-    setLocalPosts((posts) => [{ text: value || '사진을 공유했어요.', image: photo }, ...posts]);
+    if (!session) { setAuthOpen(true); return; }
+    const { error } = await supabase.from('posts').insert({
+      author_id: session.user.id,
+      body: value || '사진을 공유했어요.',
+    });
+    if (error) return;
     setPostText('');
     setPhoto('');
-  };
-
-  const quotePost = ({ comment, quotedName, quotedText }) => {
-    setLocalPosts((posts) => [{ text: comment, quoted: { name: quotedName, text: quotedText } }, ...posts]);
-    setActiveNav('홈');
+    setMoodOpen(false);
+    loadPosts(session.user.id);
   };
 
   const choosePhoto = (event) => {
@@ -269,19 +324,14 @@ function App() {
       : [...current, interest].slice(0, 3));
   };
 
-  const hashValue = async (value) => {
-    const bytes = new TextEncoder().encode(value);
-    const digest = await crypto.subtle.digest('SHA-256', bytes);
-    return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
-  };
-
   const completeSignup = async () => {
-    const passwordHash = await hashValue(password);
-    localStorage.setItem('sayo-local-account', JSON.stringify({
-      email, passwordHash, name: newName, handle: newHandle, birthDate,
-      accountPrivacy, dmPrivacy, interests, identityType: 'local-test',
-    }));
-    localStorage.setItem('sayo-local-session', email);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { handle: newHandle, display_name: newName } },
+    });
+    if (error) { setAuthError(error.message); return; }
+    setAuthError('');
     setAuthOpen(false);
     setSignupStep(1);
   };
@@ -338,15 +388,18 @@ function App() {
   };
 
   const loginLocalAccount = async () => {
-    const account = JSON.parse(localStorage.getItem('sayo-local-account') || 'null');
-    const passwordHash = await hashValue(loginPassword);
-    if (!account || account.email !== loginEmail || account.passwordHash !== passwordHash) {
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
+    if (error) {
       setAuthError('이메일 또는 비밀번호가 일치하지 않습니다.');
       return;
     }
-    localStorage.setItem('sayo-local-session', account.email);
     setAuthError('');
     setAuthOpen(false);
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setAuthOpen(true);
   };
 
   const passwordIsStrong = password.length >= 8
@@ -362,10 +415,7 @@ function App() {
     '내 프로필': { title: '내 프로필', subtitle: me.handle },
   })[activeNav] || { title: activeNav, subtitle: '' };
 
-  const ownPosts = localPosts.map((post, index) => ({
-    ...post, id: `own-${index}`, author: me, time: '방금', initialLikes: 0, own: true, follows: true,
-  }));
-  const allPosts = [...ownPosts, ...seedPosts];
+  const allPosts = [...dbPosts, ...seedPosts];
   const visiblePosts = feedTab === '팔로잉'
     ? allPosts.filter((post) => post.follows || post.own)
     : feedTab === '추천'
@@ -397,9 +447,11 @@ function App() {
         </nav>
         <button className="new-post" onClick={() => document.querySelector('.composer textarea')?.focus()}><Plus size={20} /> 새 글 쓰기</button>
         <div className="my-account">
-          <Avatar person={{ name: '지우', color: '#65c6ba', online: true }} size={40} />
-          <div><strong>김지우</strong><span>@jiwoo</span></div>
-          <Settings size={18} />
+          <Avatar person={{ name: profile?.display_name || '게스트', color: profile?.avatar_color || '#65c6ba', online: true }} size={40} />
+          <div><strong>{profile?.display_name || '게스트'}</strong><span>{profile ? '@' + profile.handle : '로그인 필요'}</span></div>
+          {session
+            ? <button className="icon-btn" onClick={logout} aria-label="로그아웃"><Settings size={18} /></button>
+            : <button className="icon-btn" onClick={() => setAuthOpen(true)} aria-label="로그인"><Settings size={18} /></button>}
         </div>
       </aside>
 
@@ -452,7 +504,6 @@ function App() {
             initialReplies={post.initialReplies}
             repostedBy={post.repostedBy}
             quoted={post.quoted}
-            onQuote={quotePost}
           />
         )) : <p className="empty-note">팔로우한 사람의 글이 아직 없어요. 둘러보기에서 사람을 찾아보세요.</p>}
         </>
@@ -525,14 +576,14 @@ function App() {
             <div className="profile-id"><h2>{me.name}</h2><span>{me.handle}</span></div>
             <p className="profile-bio">조용한 동네 산책과 좋은 대화를 좋아합니다. 작은 순간을 오래 기억하려고 해요.</p>
             <div className="profile-stats">
-              <div><strong>{localPosts.length}</strong><span>게시물</span></div>
+              <div><strong>{dbPosts.filter((post) => post.own).length}</strong><span>게시물</span></div>
               <div><strong>128</strong><span>팔로워</span></div>
               <div><strong>96</strong><span>팔로잉</span></div>
             </div>
             <div className="feed-tabs"><button className="selected">게시물</button><button>답글</button><button>별</button></div>
-            {localPosts.length ? (
-              localPosts.map((post, index) => (
-                <Post key={index} author={me} time="방금" text={post.text} image={post.image} quoted={post.quoted} onQuote={quotePost} initialLikes={0} />
+            {dbPosts.some((post) => post.own) ? (
+              dbPosts.filter((post) => post.own).map((post) => (
+                <Post key={post.id} author={post.author} time={post.time} text={post.text} image={post.image} initialLikes={0} />
               ))
             ) : (
               <p className="empty-note">아직 작성한 게시물이 없어요. 홈에서 첫 글을 남겨보세요.</p>

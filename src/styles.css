@@ -83,7 +83,7 @@ h1, h2, p { margin-top: 0; }
 .post-copy { margin: 15px 2px 14px; color: #454448; line-height: 1.8; font-size: 13px; }
 .post-image { display: block; width: 100%; max-height: 410px; object-fit: cover; border-radius: 14px; }
 .post-actions { display: flex; gap: 15px; margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
-.action { border: 0; background: none; color: #949398; display: flex; gap: 6px; align-items: center; cursor: pointer; font-size: 11px; }
+.action { border: 0; background: none; color: #949398; display: flex; gap: 6px; align-items: center; cursor: pointer; font-size: 11px; white-space: nowrap; }
 .action:last-child { margin-left: auto; }
 .action.liked { color: var(--sayo); }
 .action.saved { color: var(--blue); }
@@ -313,6 +313,8 @@ h1, h2, p { margin-top: 0; }
   .composer { border-radius: 14px; padding: 14px; }
   .composer .avatar { display: none; }
   .post { padding: 14px; border-radius: 14px; }
+  .post-actions { gap: 9px; }
+  .action { gap: 4px; font-size: 10px; }
 }
 
 .mobile-nav { display: none; }

@@ -1,8 +1,8 @@
-# Turnstile(봇 차단 캡차) 켜기 — 나중에 컨디션 좋을 때
+# ✅ 완료됨 (2026-06-16) — Turnstile(봇 차단 캡차) 라이브 작동 중
 
-> 코드는 이미 완성·커밋됨(01f5bbe). 가짜 "로컬 테스트 본인확인"을 Turnstile로 교체.
-> 키(VITE_TURNSTILE_SITE_KEY)가 없으면 자동 비활성 → 지금도 사이트는 정상 동작.
-> 아래 5개만 하면 켜짐. Claude한테 "Turnstile 이어서 켜자" 하면 도와줌.
+> Cloudflare 위젯 'sayo' 생성 + Site Key(.env/GitHub 시크릿/deploy.yml) + Secret Key(Supabase Attack Protection)
+> + CSP 허용까지 전부 완료. 로컬·라이브 둘 다 위젯 통과 + 서버 검증까지 실제 가입 테스트 통과.
+> (아래는 당시 작업 순서 — 기록용. 다른 PC에서 .env 만들 때 VITE_TURNSTILE_SITE_KEY 한 줄도 같이 넣어야 함.)
 
 ## 1. Cloudflare 무료 가입
 - https://dash.cloudflare.com/sign-up (가입 페이지가 느릴 수 있음 — 새로고침)

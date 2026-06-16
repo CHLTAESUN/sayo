@@ -8,6 +8,7 @@ import './styles.css';
 import { supabase } from './lib/supabase';
 import { gateAuth } from './lib/authGate';
 import { emailVerify } from './lib/emailVerify';
+import Turnstile, { TURNSTILE_ENABLED } from './Turnstile';
 
 const navItems = [
   { label: '홈', icon: Home },
@@ -205,9 +206,8 @@ function App() {
   const [emailCodeInput, setEmailCodeInput] = useState('');
   const [emailVerified, setEmailVerified] = useState(false);
   const [emailBusy, setEmailBusy] = useState(false);
-  const [identityVerified, setIdentityVerified] = useState(false);
-  const [identityChallenge, setIdentityChallenge] = useState('');
-  const [identityInput, setIdentityInput] = useState('');
+  const [signupCaptcha, setSignupCaptcha] = useState('');
+  const [loginCaptcha, setLoginCaptcha] = useState('');
   const [authError, setAuthError] = useState('');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -350,7 +350,10 @@ function App() {
       const { error } = await supabase.auth.signUp({
         email: authEmail,
         password,
-        options: { data: { handle: newHandle, display_name: newName, contact_email: contactEmail, contact_email_verified: emailVerified } },
+        options: {
+          captchaToken: signupCaptcha || undefined,
+          data: { handle: newHandle, display_name: newName, contact_email: contactEmail, contact_email_verified: emailVerified },
+        },
       });
       if (error) { setAuthError(error.message); return; }
     } else if (gated.error) {
@@ -361,33 +364,14 @@ function App() {
     setAuthOpen(false);
     setSignupStep(1);
     resetEmailVerification();
-  };
-
-  const issueIdentityChallenge = () => {
-    const challenge = String(Math.floor(100000 + Math.random() * 900000));
-    setIdentityChallenge(challenge);
-    setIdentityInput('');
-    setIdentityVerified(false);
-    setAuthError('');
+    setSignupCaptcha('');
   };
 
   // 이메일은 선택 입력. 비어 있으면 통과, 입력했다면 형식만 검사.
   const emailIsValid = email.trim() === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-  const resetIdentityVerification = () => {
-    setIdentityVerified(false);
-    setIdentityChallenge('');
-    setIdentityInput('');
-  };
-
-  const verifyIdentityChallenge = () => {
-    if (identityInput === identityChallenge && identityChallenge) {
-      setIdentityVerified(true);
-      setAuthError('');
-      return;
-    }
-    setAuthError('인증번호가 일치하지 않습니다.');
-  };
+  // 캡차: 사이트키 없으면(미설정) 통과, 있으면 토큰 받아야 통과.
+  const signupCaptchaOk = !TURNSTILE_ENABLED || !!signupCaptcha;
+  const loginCaptchaOk = !TURNSTILE_ENABLED || !!loginCaptcha;
 
   const issueEmailCode = async () => {
     setEmailBusy(true);
@@ -425,9 +409,14 @@ function App() {
     const gated = await gateAuth({ action: 'login', email: identifier, password: loginPassword });
     if (gated.fallback) {
       // 검문소 미배포 시 기존 직접 로그인
-      const { error } = await supabase.auth.signInWithPassword({ email: identifier, password: loginPassword });
+      const { error } = await supabase.auth.signInWithPassword({
+        email: identifier,
+        password: loginPassword,
+        options: { captchaToken: loginCaptcha || undefined },
+      });
       if (error) {
         setAuthError('아이디 또는 비밀번호가 일치하지 않습니다.');
+        setLoginCaptcha('');
         return;
       }
     } else if (gated.error) {
@@ -865,7 +854,8 @@ function App() {
                 <label>이메일 또는 아이디<input value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="name@example.com 또는 아이디" /></label>
                 <label>비밀번호<input value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} type="password" placeholder="비밀번호" /></label>
                 {authError ? <p className="auth-error">{authError}</p> : null}
-                <button className="auth-primary" onClick={loginLocalAccount}>로그인</button>
+                <Turnstile onToken={setLoginCaptcha} />
+                <button className="auth-primary" disabled={!loginCaptchaOk} onClick={loginLocalAccount}>로그인</button>
                 <div className="auth-divider"><span>또는</span></div>
                 <button className="social-login">카카오로 계속하기</button>
                 <button className="social-login">Google로 계속하기</button>
@@ -898,27 +888,22 @@ function App() {
                         )
                       ) : null}
                     </div>
-                    {identityVerified ? (
-                      <div className="verified-summary"><div><strong>본인확인 완료</strong><span>로컬 테스트 본인확인</span></div><button onClick={resetIdentityVerification}>다시 인증</button></div>
-                    ) : (
+                    {TURNSTILE_ENABLED ? (
                       <div className="verification-block">
                         <div className="identity-check">
-                          <div><strong>로컬 테스트 본인확인</strong><span>실제 PASS 연동 전 가입 흐름을 시험합니다.</span></div>
-                          <button onClick={issueIdentityChallenge}>{identityChallenge ? '재발급' : '인증번호 발급'}</button>
+                          <div><strong>사람인지 확인</strong><span>봇 자동가입을 막기 위한 확인이에요. 잠시면 끝나요.</span></div>
                         </div>
-                        {identityChallenge ? <div className="local-code">로컬 테스트 인증번호 <strong>{identityChallenge}</strong></div> : null}
-                        {identityChallenge ? <div className="identity-entry"><input value={identityInput} onChange={(e) => setIdentityInput(e.target.value.replace(/\D/g, ''))} maxLength={6} placeholder="인증번호 6자리 입력" /><button disabled={identityInput.length !== 6} onClick={verifyIdentityChallenge}>인증번호 확인</button></div> : null}
+                        <Turnstile onToken={setSignupCaptcha} />
                       </div>
-                    )}
+                    ) : null}
                     {authError ? <p className="auth-error">{authError}</p> : null}
-                    <p className="auth-note">이 인증은 로컬 테스트 전용이며 실제 한국인 본인인증이 아닙니다. 운영 배포 전 PASS 본인확인기관을 연결해야 합니다.</p>
                     <div className="verification-status">
                       <span className={emailIsValid ? 'done' : ''}>{emailIsValid ? '✓' : '1'} 이메일 (선택)</span>
-                      <span className={identityVerified ? 'done' : ''}>{identityVerified ? '✓' : '2'} 본인확인</span>
+                      <span className={signupCaptchaOk ? 'done' : ''}>{signupCaptchaOk ? '✓' : '2'} 사람 확인</span>
                     </div>
-                    {!emailIsValid || !identityVerified ? <p className="auth-requirement">본인확인을 완료하면 다음 단계로 이동할 수 있습니다. (이메일은 선택)</p> : null}
-                    <button className="auth-primary" disabled={!emailIsValid || !identityVerified} onClick={() => setSignupStep(2)}>
-                      {!emailIsValid ? '이메일 형식 확인 필요' : !identityVerified ? '본인확인 필요' : '다음'}
+                    {!emailIsValid || !signupCaptchaOk ? <p className="auth-requirement">사람 확인을 완료하면 다음 단계로 이동할 수 있습니다. (이메일은 선택)</p> : null}
+                    <button className="auth-primary" disabled={!emailIsValid || !signupCaptchaOk} onClick={() => setSignupStep(2)}>
+                      {!emailIsValid ? '이메일 형식 확인 필요' : !signupCaptchaOk ? '사람 확인 필요' : '다음'}
                     </button>
                   </>
                 ) : null}

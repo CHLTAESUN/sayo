@@ -336,13 +336,16 @@ function App() {
   };
 
   const completeSignup = async () => {
-    const gated = await gateAuth({ action: 'signup', email, password, handle: newHandle, display_name: newName });
+    // 로그인 신원은 항상 아이디 기반 가짜 이메일. 실제 이메일은 선택 입력 → 나중에 복구/인증용으로 프로필에 보관.
+    const authEmail = `${newHandle.trim().toLowerCase()}@sayo.app`;
+    const contactEmail = email.trim() || null;
+    const gated = await gateAuth({ action: 'signup', email: authEmail, password, handle: newHandle, display_name: newName });
     if (gated.fallback) {
       // 검문소 미배포 시 기존 직접 가입
       const { error } = await supabase.auth.signUp({
-        email,
+        email: authEmail,
         password,
-        options: { data: { handle: newHandle, display_name: newName } },
+        options: { data: { handle: newHandle, display_name: newName, contact_email: contactEmail } },
       });
       if (error) { setAuthError(error.message); return; }
     } else if (gated.error) {
@@ -362,7 +365,8 @@ function App() {
     setAuthError('');
   };
 
-  const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  // 이메일은 선택 입력. 비어 있으면 통과, 입력했다면 형식만 검사.
+  const emailIsValid = email.trim() === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const resetIdentityVerification = () => {
     setIdentityVerified(false);
@@ -380,17 +384,15 @@ function App() {
   };
 
   const loginLocalAccount = async () => {
-    const identifier = loginEmail.trim();
+    const raw = loginEmail.trim();
+    // 아이디로 로그인하면 가입 때와 동일하게 아이디@sayo.app 으로 매핑. 이메일을 직접 넣으면 그대로 사용.
+    const identifier = raw.includes('@') ? raw : `${raw.toLowerCase()}@sayo.app`;
     const gated = await gateAuth({ action: 'login', email: identifier, password: loginPassword });
     if (gated.fallback) {
-      // 검문소 미배포 시 기존 직접 로그인 (아이디 로그인은 검문소가 필요)
-      if (!identifier.includes('@')) {
-        setAuthError('아이디 로그인은 준비 중이에요. 이메일로 로그인해주세요.');
-        return;
-      }
+      // 검문소 미배포 시 기존 직접 로그인
       const { error } = await supabase.auth.signInWithPassword({ email: identifier, password: loginPassword });
       if (error) {
-        setAuthError('이메일 또는 비밀번호가 일치하지 않습니다.');
+        setAuthError('아이디 또는 비밀번호가 일치하지 않습니다.');
         return;
       }
     } else if (gated.error) {
@@ -840,9 +842,9 @@ function App() {
                   <>
                     <h2>본인 확인을 진행해요</h2>
                     <div className="verification-block">
-                      <label>이메일<input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="name@example.com" /></label>
+                      <label>이메일 (선택)<input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="name@example.com (선택)" /></label>
                       {email && !emailIsValid ? <p className="field-error">이메일 형식이 올바르지 않습니다.</p> : null}
-                      <p className="auth-note">가입 완료 후 이 주소로 확인 메일이 발송됩니다. 메일의 링크를 눌러야 로그인할 수 있어요.</p>
+                      <p className="auth-note">아이디만으로 가입할 수 있어요. 이메일은 비밀번호 찾기 등 나중을 위해 선택 입력합니다.</p>
                     </div>
                     {identityVerified ? (
                       <div className="verified-summary"><div><strong>본인확인 완료</strong><span>로컬 테스트 본인확인</span></div><button onClick={resetIdentityVerification}>다시 인증</button></div>
@@ -859,12 +861,12 @@ function App() {
                     {authError ? <p className="auth-error">{authError}</p> : null}
                     <p className="auth-note">이 인증은 로컬 테스트 전용이며 실제 한국인 본인인증이 아닙니다. 운영 배포 전 PASS 본인확인기관을 연결해야 합니다.</p>
                     <div className="verification-status">
-                      <span className={emailIsValid ? 'done' : ''}>{emailIsValid ? '✓' : '1'} 이메일 입력</span>
+                      <span className={emailIsValid ? 'done' : ''}>{emailIsValid ? '✓' : '1'} 이메일 (선택)</span>
                       <span className={identityVerified ? 'done' : ''}>{identityVerified ? '✓' : '2'} 본인확인</span>
                     </div>
-                    {!emailIsValid || !identityVerified ? <p className="auth-requirement">이메일 입력과 본인확인을 완료하면 다음 단계로 이동할 수 있습니다.</p> : null}
+                    {!emailIsValid || !identityVerified ? <p className="auth-requirement">본인확인을 완료하면 다음 단계로 이동할 수 있습니다. (이메일은 선택)</p> : null}
                     <button className="auth-primary" disabled={!emailIsValid || !identityVerified} onClick={() => setSignupStep(2)}>
-                      {!emailIsValid ? '이메일 입력 필요' : !identityVerified ? '본인확인 필요' : '다음'}
+                      {!emailIsValid ? '이메일 형식 확인 필요' : !identityVerified ? '본인확인 필요' : '다음'}
                     </button>
                   </>
                 ) : null}

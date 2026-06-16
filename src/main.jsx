@@ -217,8 +217,6 @@ function App() {
   const [newHandle, setNewHandle] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [terms, setTerms] = useState({ service: false, privacy: false, age: false });
-  const [accountPrivacy, setAccountPrivacy] = useState('public');
-  const [dmPrivacy, setDmPrivacy] = useState('following');
   const [interests, setInterests] = useState([]);
   const [activeNav, setActiveNav] = useState('홈');
   const [selectedPerson, setSelectedPerson] = useState(people[0]);
@@ -936,9 +934,8 @@ function App() {
                 ) : null}
                 {signupStep === 4 ? (
                   <>
-                    <h2>공개 범위와 약관을 확인해요</h2>
-                    <label>계정 공개 범위<select value={accountPrivacy} onChange={(e) => setAccountPrivacy(e.target.value)}><option value="public">공개 계정</option><option value="private">비공개 계정</option></select></label>
-                    <label>메시지 수신 범위<select value={dmPrivacy} onChange={(e) => setDmPrivacy(e.target.value)}><option value="following">내가 팔로우한 사람만</option><option value="followers">팔로워까지</option><option value="none">메시지 받지 않기</option></select></label>
+                    <h2>약관을 확인해요</h2>
+                    <p className="auth-note">공개 범위와 메시지 수신 설정은 가입 후 설정에서 바꿀 수 있어요.</p>
                     <div className="terms-list">
                       <label><input type="checkbox" checked={terms.service} onChange={(e) => setTerms({ ...terms, service: e.target.checked })} /> 이용약관 동의 (필수)</label>
                       <label><input type="checkbox" checked={terms.privacy} onChange={(e) => setTerms({ ...terms, privacy: e.target.checked })} /> 개인정보 처리방침 동의 (필수)</label>

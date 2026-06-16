@@ -1,6 +1,6 @@
 // Cloudflare Turnstile(봇 차단 캡차) 위젯.
 // VITE_TURNSTILE_SITE_KEY 가 없으면 아무것도 렌더하지 않음(=캡차 비활성, 기존 흐름 유지).
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 export const TURNSTILE_ENABLED = !!SITE_KEY;

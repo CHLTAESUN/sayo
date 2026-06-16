@@ -339,6 +339,8 @@ function App() {
   };
 
   const completeSignup = async () => {
+    // 필수 약관 3개를 모두 동의하지 않으면 가입 진행 불가(안전장치).
+    if (!requiredTermsAccepted) { setAuthError('필수 약관에 모두 동의해야 가입할 수 있어요.'); setSignupStep(4); return; }
     // 로그인 신원은 항상 아이디 기반 가짜 이메일. 실제 이메일은 선택 입력 → 나중에 복구/인증용으로 프로필에 보관.
     const authEmail = `${newHandle.trim().toLowerCase()}@sayo.app`;
     const contactEmail = email.trim() || null;
@@ -586,6 +588,27 @@ function App() {
             <small>{popularPosts[tickerIndex].author} · 답글 {popularPosts[tickerIndex].replies}</small>
           </span>
         </button>
+
+        <section className="feed-popular">
+          <div className="section-head"><h2>인기 게시물</h2><button onClick={() => setActiveNav('둘러보기')}>더 보기</button></div>
+          <div className="popular-list">
+            {popularPosts.map((post, index) => (
+              <button className="popular-row" key={post.topic}>
+                <span className="rank">{index + 1}</span>
+                <div>
+                  <small>{post.author}</small>
+                  <strong>{post.topic}</strong>
+                  <span className="popular-stats">
+                    <span>조회 {post.views}</span>
+                    <span>답글 {post.replies}</span>
+                    <span>별 {post.stars}</span>
+                    <span>재게시 {post.reposts}</span>
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
 
         <div className="feed-tabs">
           {['추천', '팔로잉', '최신'].map((tab) => (

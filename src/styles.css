@@ -138,8 +138,8 @@ h1, h2, p { margin-top: 0; }
 .discover-panel { margin: 22px 0 22px 18px; padding: 16px 14px; height: calc(100vh - 44px); border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow-y: auto; }
 .discover-panel section + section { margin-top: 22px; }
 .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
-.section-head h2 { margin: 0; font-size: 12px; }
-.section-head button { border: 0; background: none; color: #777; font-size: 10px; cursor: pointer; }
+.section-head h2 { margin: 0; font-size: 15px; }
+.section-head button { border: 0; background: none; color: #777; font-size: 12px; cursor: pointer; }
 .people-list { display: grid; gap: 5px; }
 .person-row { width: 100%; display: flex; align-items: center; gap: 9px; border: 0; padding: 9px; border-radius: 12px; background: none; cursor: pointer; text-align: left; }
 .person-row:hover, .person-row.active { background: var(--sayo-soft); }
@@ -156,13 +156,13 @@ h1, h2, p { margin-top: 0; }
 .message-profile span { max-width: 135px; overflow: hidden; color: var(--muted); font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
 .message-profile > svg { flex: 0 0 auto; margin-left: auto; color: #888; }
 .popular-list { display: grid; }
-.popular-row { display: flex; gap: 7px; width: 100%; padding: 8px 2px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; }
+.popular-row { display: flex; gap: 9px; width: 100%; padding: 11px 2px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; }
 .popular-row:hover strong { text-decoration: underline; }
-.popular-row .rank { flex: 0 0 auto; width: 18px; height: 18px; display: grid; place-items: center; color: var(--sayo-dark); background: var(--sayo-soft); border-radius: 5px; font-size: 8px; font-weight: 700; }
-.popular-row > div { min-width: 0; display: grid; gap: 3px; }
-.popular-row small { color: var(--muted); font-size: 7px; }
-.popular-row strong { font-size: 9px; line-height: 1.35; }
-.popular-stats { display: flex; flex-wrap: wrap; gap: 3px 6px; color: var(--muted); font-size: 6px; }
+.popular-row .rank { flex: 0 0 auto; width: 22px; height: 22px; display: grid; place-items: center; color: var(--sayo-dark); background: var(--sayo-soft); border-radius: 6px; font-size: 11px; font-weight: 700; }
+.popular-row > div { min-width: 0; display: grid; gap: 4px; }
+.popular-row small { color: var(--muted); font-size: 11px; }
+.popular-row strong { font-size: 13px; line-height: 1.35; }
+.popular-stats { display: flex; flex-wrap: wrap; gap: 4px 8px; color: var(--muted); font-size: 10px; }
 
 .block-title { margin: 0 2px 12px; font-size: 14px; letter-spacing: -.3px; }
 .explore-block + .explore-block { margin-top: 28px; }
@@ -318,9 +318,13 @@ h1, h2, p { margin-top: 0; }
 .auth-divider::before, .auth-divider::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 .social-login { height: 41px; border: 1px solid var(--line); border-radius: 9px; background: #fff; cursor: pointer; font-size: 11px; font-weight: 600; }
 
+/* 인기 게시물 피드 내 블록: 넓은 화면에선 오른쪽 패널이 있으니 숨기고, 좁아지면 표시 */
+.feed-popular { display: none; }
+
 @media (max-width: 1250px) {
   .app-shell { grid-template-columns: 190px minmax(470px, 660px) 280px; }
   .discover-panel { display: none; }
+  .feed-popular { display: block; margin: 16px 0 4px; padding: 6px 16px 10px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
 }
 
 @media (max-width: 940px) {

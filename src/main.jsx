@@ -7,6 +7,7 @@ import {
 import './styles.css';
 import { supabase } from './lib/supabase';
 import { gateAuth } from './lib/authGate';
+import { emailVerify } from './lib/emailVerify';
 
 const navItems = [
   { label: '홈', icon: Home },
@@ -200,6 +201,10 @@ function App() {
   const [authMode, setAuthMode] = useState('signup');
   const [signupStep, setSignupStep] = useState(1);
   const [email, setEmail] = useState('');
+  const [emailCodeSent, setEmailCodeSent] = useState(false);
+  const [emailCodeInput, setEmailCodeInput] = useState('');
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
   const [identityVerified, setIdentityVerified] = useState(false);
   const [identityChallenge, setIdentityChallenge] = useState('');
   const [identityInput, setIdentityInput] = useState('');
@@ -345,7 +350,7 @@ function App() {
       const { error } = await supabase.auth.signUp({
         email: authEmail,
         password,
-        options: { data: { handle: newHandle, display_name: newName, contact_email: contactEmail } },
+        options: { data: { handle: newHandle, display_name: newName, contact_email: contactEmail, contact_email_verified: emailVerified } },
       });
       if (error) { setAuthError(error.message); return; }
     } else if (gated.error) {
@@ -355,6 +360,7 @@ function App() {
     setAuthError('');
     setAuthOpen(false);
     setSignupStep(1);
+    resetEmailVerification();
   };
 
   const issueIdentityChallenge = () => {
@@ -381,6 +387,35 @@ function App() {
       return;
     }
     setAuthError('인증번호가 일치하지 않습니다.');
+  };
+
+  const issueEmailCode = async () => {
+    setEmailBusy(true);
+    setAuthError('');
+    const res = await emailVerify({ action: 'issue', email: email.trim() });
+    setEmailBusy(false);
+    if (res.fallback) {
+      setAuthError('이메일 인증이 아직 연결되지 않았어요. 이메일 없이 아이디로 가입할 수 있어요.');
+      return;
+    }
+    if (res.error) { setAuthError(res.error); return; }
+    setEmailCodeSent(true);
+    setEmailCodeInput('');
+  };
+
+  const checkEmailCode = async () => {
+    setEmailBusy(true);
+    setAuthError('');
+    const res = await emailVerify({ action: 'check', email: email.trim(), code: emailCodeInput });
+    setEmailBusy(false);
+    if (res.error) { setAuthError(res.error); return; }
+    if (res.verified) { setEmailVerified(true); setAuthError(''); }
+  };
+
+  const resetEmailVerification = () => {
+    setEmailCodeSent(false);
+    setEmailCodeInput('');
+    setEmailVerified(false);
   };
 
   const loginLocalAccount = async () => {
@@ -842,9 +877,26 @@ function App() {
                   <>
                     <h2>본인 확인을 진행해요</h2>
                     <div className="verification-block">
-                      <label>이메일 (선택)<input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="name@example.com (선택)" /></label>
+                      <label>이메일 (선택)<input value={email} onChange={(e) => { setEmail(e.target.value); resetEmailVerification(); }} type="email" placeholder="name@example.com (선택)" /></label>
                       {email && !emailIsValid ? <p className="field-error">이메일 형식이 올바르지 않습니다.</p> : null}
                       <p className="auth-note">아이디만으로 가입할 수 있어요. 이메일은 비밀번호 찾기 등 나중을 위해 선택 입력합니다.</p>
+                      {email.trim() && emailIsValid ? (
+                        emailVerified ? (
+                          <div className="verified-summary"><div><strong>이메일 인증 완료</strong><span>{email.trim()}</span></div><button onClick={resetEmailVerification}>다시 인증</button></div>
+                        ) : (
+                          <div className="identity-entry">
+                            {!emailCodeSent ? (
+                              <button disabled={emailBusy} onClick={issueEmailCode}>{emailBusy ? '발송 중…' : '인증번호 발급'}</button>
+                            ) : (
+                              <>
+                                <input value={emailCodeInput} onChange={(e) => setEmailCodeInput(e.target.value.replace(/\D/g, ''))} maxLength={6} placeholder="메일로 받은 6자리" />
+                                <button disabled={emailBusy || emailCodeInput.length !== 6} onClick={checkEmailCode}>{emailBusy ? '확인 중…' : '확인'}</button>
+                                <button disabled={emailBusy} onClick={issueEmailCode}>재발급</button>
+                              </>
+                            )}
+                          </div>
+                        )
+                      ) : null}
                     </div>
                     {identityVerified ? (
                       <div className="verified-summary"><div><strong>본인확인 완료</strong><span>로컬 테스트 본인확인</span></div><button onClick={resetIdentityVerification}>다시 인증</button></div>

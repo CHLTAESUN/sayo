@@ -1,7 +1,9 @@
 # SAYO 인수인계 (HANDOFF)
 
 > 다음 세션/다른 에이전트가 맥락 반복 없이 이어받기 위한 문서. **작업 전 이 파일 + CLAUDE.md + SECURITY.md를 먼저 읽는다.**
-> Last updated: 2026-06-11 · 작성: Claude Code (Opus 4.8), Codex와 공동 작업
+> Last updated: 2026-06-16 · 작성: Claude Code (Opus 4.8), Codex와 공동 작업
+> ⚡ 최신 세션(2026-06-16) 요약·이어서 할 일은 **이어서_2026-06-16.md** 를 먼저 보세요.
+>    (아이디 가입 전환, 이메일 인증번호=Brevo, 봇차단 캡차=Cloudflare Turnstile, UI 다듬기 완료. 라이브 발행됨.)
 
 ## 1. 프로젝트 한눈에
 

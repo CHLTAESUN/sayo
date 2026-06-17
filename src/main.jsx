@@ -523,7 +523,7 @@ function App() {
             </button>
           ))}
         </nav>
-        <button className="new-post" onClick={() => document.querySelector('.composer textarea')?.focus()}><Plus size={20} /> 새 글 쓰기</button>
+        <button className="new-post" onClick={() => { setActiveNav('홈'); setTimeout(() => { const t = document.querySelector('.composer textarea'); t?.scrollIntoView({ block: 'center' }); t?.focus(); }, 60); }}><Plus size={20} /> 새 글 쓰기</button>
         <div className="my-account">
           <Avatar person={{ name: profile?.display_name || '게스트', color: profile?.avatar_color || '#65c6ba', online: true }} size={40} />
           <div><strong>{profile?.display_name || '게스트'}</strong><span>{profile ? '@' + profile.handle : '로그인 필요'}</span></div>

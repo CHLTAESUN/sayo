@@ -194,6 +194,61 @@ function Post({ author, time, text, image, initialLikes, initialReplies = [], re
   );
 }
 
+// 인기 게시물 상세 팝업. 별/답글/저장이 실제로 동작(로컬 상태).
+function PostDetail({ post, onClose }) {
+  const [liked, setLiked] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [showReply, setShowReply] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replies, setReplies] = useState(post.comments || []);
+  const addReply = () => {
+    if (!replyText.trim()) return;
+    setReplies((c) => [...c, { name: '나', text: replyText.trim() }]);
+    setReplyText('');
+    setShowReply(false);
+  };
+  return (
+    <div className="post-modal-backdrop" onClick={onClose}>
+      <div className="post-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="post-modal-top">
+          <span>게시물</span>
+          <button className="icon-btn" onClick={onClose} aria-label="닫기"><X size={20} /></button>
+        </div>
+        <article className="post">
+          <div className="post-head">
+            <Avatar person={{ name: post.author, color: '#65c6ba' }} size={44} />
+            <div className="post-meta"><strong>{post.author}</strong><span>{post.handle} · 인기 글</span></div>
+          </div>
+          <p className="post-copy">{post.body || post.topic}</p>
+          <div className="post-actions">
+            <button className={liked ? 'action liked' : 'action'} onClick={() => setLiked(!liked)}>
+              <Star size={20} fill={liked ? 'currentColor' : 'none'} /> {post.stars}{liked ? ' ⁺¹' : ''}
+            </button>
+            <button className="action" onClick={() => setShowReply(!showReply)}><MessageCircle size={20} /> {replies.length}</button>
+            <button className="action"><Repeat2 size={19} /> {post.reposts}</button>
+            <button className={saved ? 'action saved' : 'action'} onClick={() => setSaved(!saved)} aria-label="저장">
+              <Bookmark size={20} fill={saved ? 'currentColor' : 'none'} />
+            </button>
+          </div>
+          {showReply ? (
+            <div className="reply-box">
+              <input value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addReply()} placeholder="답글 남기기" autoFocus />
+              <button onClick={addReply}>답글</button>
+            </div>
+          ) : null}
+          {replies.length ? (
+            <div className="reply-preview">
+              {replies.map((c, i) => (
+                <div className="reply-line" key={i}><span className="reply-branch" /><div><strong>{c.name}</strong><p>{c.text}</p></div></div>
+              ))}
+            </div>
+          ) : null}
+        </article>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [session, setSession] = useState(null);
@@ -697,7 +752,7 @@ function App() {
             <div className="profile-cover" />
             <div className="profile-head">
               <Avatar person={me} size={76} />
-              <button className="profile-edit">프로필 편집</button>
+              <button className="profile-edit" onClick={() => (session ? openSettings() : setAuthOpen(true))}>프로필 편집</button>
             </div>
             <div className="profile-id"><h2>{me.name}</h2><span>{me.handle}</span></div>
             <p className="profile-bio">조용한 동네 산책과 좋은 대화를 좋아합니다. 작은 순간을 오래 기억하려고 해요.</p>
@@ -878,39 +933,7 @@ function App() {
         </div>
       ) : null}
 
-      {openedPost ? (
-        <div className="post-modal-backdrop" onClick={() => setOpenedPost(null)}>
-          <div className="post-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="post-modal-top">
-              <span>게시물</span>
-              <button className="icon-btn" onClick={() => setOpenedPost(null)} aria-label="닫기"><X size={20} /></button>
-            </div>
-            <article className="post">
-              <div className="post-head">
-                <Avatar person={{ name: openedPost.author, color: '#65c6ba' }} size={44} />
-                <div className="post-meta">
-                  <strong>{openedPost.author}</strong>
-                  <span>{openedPost.handle} · 인기 글</span>
-                </div>
-              </div>
-              <p className="post-copy">{openedPost.body || openedPost.topic}</p>
-              <div className="post-actions">
-                <button className="action"><Star size={20} /> {openedPost.stars}</button>
-                <button className="action"><MessageCircle size={20} /> {openedPost.replies}</button>
-                <button className="action"><Repeat2 size={19} /> {openedPost.reposts}</button>
-                <button className="action" aria-label="저장"><Bookmark size={20} /></button>
-              </div>
-              {openedPost.comments?.length ? (
-                <div className="reply-preview">
-                  {openedPost.comments.map((c, i) => (
-                    <div className="reply-line" key={i}><span className="reply-branch" /><div><strong>{c.name}</strong><p>{c.text}</p></div></div>
-                  ))}
-                </div>
-              ) : null}
-            </article>
-          </div>
-        </div>
-      ) : null}
+      {openedPost ? <PostDetail post={openedPost} onClose={() => setOpenedPost(null)} /> : null}
 
       {authOpen ? (
         <div className="auth-backdrop">

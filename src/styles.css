@@ -215,6 +215,11 @@ h1, h2, p { margin-top: 0; }
 .profile .post { margin: 0 16px 16px; }
 .empty-note { margin: 0; padding: 36px 20px 44px; color: var(--muted); font-size: 13px; text-align: center; }
 
+.post-modal-backdrop { position: fixed; inset: 0; z-index: 95; display: grid; place-items: center; padding: 20px; background: rgba(20,40,38,.34); }
+.post-modal { width: min(560px, 100%); max-height: 84vh; overflow: auto; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 24px 70px rgba(20,60,55,.22); }
+.post-modal-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); font-weight: 700; }
+.post-modal .post { border: 0; }
+
 .search-backdrop { position: fixed; inset: 0; z-index: 90; display: grid; justify-items: center; align-content: start; padding: 76px 20px 20px; background: rgba(20,40,38,.32); }
 .search-modal { width: min(520px, 100%); max-height: 70vh; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 0 24px 70px rgba(20,60,55,.22); overflow: hidden; }
 .search-bar { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); color: var(--muted); }

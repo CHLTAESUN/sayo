@@ -25,11 +25,11 @@ const people = [
 ];
 
 const popularPosts = [
-  { author: '윤서진', topic: '사람마다 동네를 좋아하게 되는 순간', views: '2.8만', replies: 425, stars: '1.2천', reposts: 184 },
-  { author: '박도윤', topic: '오늘 하루 중 잠깐 멈추게 만든 장면', views: '2.1만', replies: 318, stars: 986, reposts: 142 },
-  { author: '한소희', topic: '오래 써도 질리지 않는 물건 추천', views: '1.7만', replies: 292, stars: 743, reposts: 91 },
-  { author: '오하린', topic: '요즘 가장 자주 듣는 노래는?', views: '1.3만', replies: 208, stars: 612, reposts: 74 },
-  { author: '문지안', topic: '혼자 걷기 좋은 시간과 장소', views: '9.8천', replies: 176, stars: 531, reposts: 63 },
+  { author: '윤서진', handle: '@seojin', topic: '사람마다 동네를 좋아하게 되는 순간', body: '자주 가는 가게에서 제 취향을 기억해줄 때, 비로소 이곳이 내 동네처럼 느껴지더라고요. 여러분은 언제 그런 순간을 느끼나요?', views: '2.8만', replies: 425, stars: '1.2천', reposts: 184, comments: [{ name: '한소희', text: '산책하다 자주 마주치는 분과 인사하게 됐을 때요.' }, { name: '이정민', text: '단골 가게 생기는 순간 진짜 공감해요.' }] },
+  { author: '박도윤', handle: '@doyoon', topic: '오늘 하루 중 잠깐 멈추게 만든 장면', body: '오늘 하루 중 잠깐 멈추게 만든 장면이 있었나요? 저는 이 바다 앞에서 한참을 서 있었어요.', views: '2.1만', replies: 318, stars: 986, reposts: 142, comments: [{ name: '오하린', text: '사진만 봐도 마음이 조용해지네요.' }] },
+  { author: '한소희', handle: '@sohee', topic: '오래 써도 질리지 않는 물건 추천', body: '몇 년째 손이 가는 물건이 있나요? 저는 단순한 무지 노트를 아직도 제일 좋아해요.', views: '1.7만', replies: 292, stars: 743, reposts: 91, comments: [{ name: '문지안', text: '저는 오래된 머그컵이요 ☕' }] },
+  { author: '오하린', handle: '@harin', topic: '요즘 가장 자주 듣는 노래는?', body: '요즘 플레이리스트 맨 위에 있는 곡 하나만 추천해주세요. 출퇴근길에 들어볼게요!', views: '1.3만', replies: 208, stars: 612, reposts: 74, comments: [{ name: '윤서진', text: '잔잔한 어쿠스틱 위주로 듣고 있어요.' }] },
+  { author: '문지안', handle: '@jian', topic: '혼자 걷기 좋은 시간과 장소', body: '혼자 걷기 좋은 시간과 장소가 있나요? 저는 비 온 다음 날 아침 강변이 제일 좋더라고요.', views: '9.8천', replies: 176, stars: 531, reposts: 63, comments: [{ name: '박도윤', text: '저녁 노을 질 때 동네 한 바퀴요.' }] },
 ];
 
 const me = { name: '김지우', handle: '@jiwoo', color: '#65c6ba', online: true };
@@ -240,6 +240,7 @@ function App() {
     return () => clearInterval(timer);
   }, []);
   const [chatOpen, setChatOpen] = useState(false);
+  const [openedPost, setOpenedPost] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const fileRef = useRef(null);
@@ -593,7 +594,7 @@ function App() {
           <div className="section-head"><h2>인기 게시물</h2><button onClick={() => setActiveNav('둘러보기')}>더 보기</button></div>
           <div className="popular-list">
             {popularPosts.map((post, index) => (
-              <button className="popular-row" key={post.topic} onClick={() => setActiveNav('둘러보기')}>
+              <button className="popular-row" key={post.topic} onClick={() => setOpenedPost(post)}>
                 <span className="rank">{index + 1}</span>
                 <div>
                   <small>{post.author}</small>
@@ -733,7 +734,7 @@ function App() {
           <div className="section-head"><h2>인기 게시물</h2><button onClick={() => setActiveNav('둘러보기')}>더 보기</button></div>
           <div className="popular-list">
             {popularPosts.map((post, index) => (
-              <button className="popular-row" key={post.topic} onClick={() => setActiveNav('둘러보기')}>
+              <button className="popular-row" key={post.topic} onClick={() => setOpenedPost(post)}>
                 <span className="rank">{index + 1}</span>
                 <div>
                   <small>{post.author}</small>
@@ -854,6 +855,40 @@ function App() {
             {settingsError ? <p className="auth-error">{settingsError}</p> : null}
             <button className="auth-primary" disabled={!editName.trim()} onClick={saveSettings}>저장</button>
             <button className="settings-logout" onClick={() => { setSettingsOpen(false); logout(); }}><LogOut size={14} /> 로그아웃</button>
+          </div>
+        </div>
+      ) : null}
+
+      {openedPost ? (
+        <div className="post-modal-backdrop" onClick={() => setOpenedPost(null)}>
+          <div className="post-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="post-modal-top">
+              <span>게시물</span>
+              <button className="icon-btn" onClick={() => setOpenedPost(null)} aria-label="닫기"><X size={20} /></button>
+            </div>
+            <article className="post">
+              <div className="post-head">
+                <Avatar person={{ name: openedPost.author, color: '#65c6ba' }} size={44} />
+                <div className="post-meta">
+                  <strong>{openedPost.author}</strong>
+                  <span>{openedPost.handle} · 인기 글</span>
+                </div>
+              </div>
+              <p className="post-copy">{openedPost.body || openedPost.topic}</p>
+              <div className="post-actions">
+                <button className="action"><Star size={20} /> {openedPost.stars}</button>
+                <button className="action"><MessageCircle size={20} /> {openedPost.replies}</button>
+                <button className="action"><Repeat2 size={19} /> {openedPost.reposts}</button>
+                <button className="action" aria-label="저장"><Bookmark size={20} /></button>
+              </div>
+              {openedPost.comments?.length ? (
+                <div className="reply-preview">
+                  {openedPost.comments.map((c, i) => (
+                    <div className="reply-line" key={i}><span className="reply-branch" /><div><strong>{c.name}</strong><p>{c.text}</p></div></div>
+                  ))}
+                </div>
+              ) : null}
+            </article>
           </div>
         </div>
       ) : null}

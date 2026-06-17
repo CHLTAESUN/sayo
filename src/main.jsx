@@ -593,7 +593,7 @@ function App() {
           <div className="section-head"><h2>인기 게시물</h2><button onClick={() => setActiveNav('둘러보기')}>더 보기</button></div>
           <div className="popular-list">
             {popularPosts.map((post, index) => (
-              <button className="popular-row" key={post.topic}>
+              <button className="popular-row" key={post.topic} onClick={() => setActiveNav('둘러보기')}>
                 <span className="rank">{index + 1}</span>
                 <div>
                   <small>{post.author}</small>
@@ -733,7 +733,7 @@ function App() {
           <div className="section-head"><h2>인기 게시물</h2><button onClick={() => setActiveNav('둘러보기')}>더 보기</button></div>
           <div className="popular-list">
             {popularPosts.map((post, index) => (
-              <button className="popular-row" key={post.topic}>
+              <button className="popular-row" key={post.topic} onClick={() => setActiveNav('둘러보기')}>
                 <span className="rank">{index + 1}</span>
                 <div>
                   <small>{post.author}</small>

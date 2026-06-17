@@ -241,6 +241,7 @@ function App() {
   }, []);
   const [chatOpen, setChatOpen] = useState(false);
   const [openedPost, setOpenedPost] = useState(null);
+  const [composeOpen, setComposeOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const fileRef = useRef(null);
@@ -315,15 +316,16 @@ function App() {
   const publishPost = async () => {
     const value = postText.trim();
     if (!value && !photo) return;
-    if (!session) { setAuthOpen(true); return; }
+    if (!session) { setComposeOpen(false); setAuthOpen(true); return; }
     const { error } = await supabase.from('posts').insert({
       author_id: session.user.id,
       body: value || '사진을 공유했어요.',
     });
-    if (error) return;
+    if (error) { setAuthError(''); alert('게시 중 문제가 발생했어요. 잠시 후 다시 시도해주세요.'); return; }
     setPostText('');
     setPhoto('');
     setMoodOpen(false);
+    setComposeOpen(false);
     loadPosts(session.user.id);
   };
 
@@ -524,7 +526,7 @@ function App() {
             </button>
           ))}
         </nav>
-        <button className="new-post" onClick={() => { setActiveNav('홈'); setTimeout(() => { const t = document.querySelector('.composer textarea'); t?.scrollIntoView({ block: 'center' }); t?.focus(); }, 60); }}><Plus size={20} /> 새 글 쓰기</button>
+        <button className="new-post" onClick={() => setComposeOpen(true)}><Plus size={20} /> 새 글 쓰기</button>
         <div className="my-account">
           <Avatar person={{ name: profile?.display_name || '게스트', color: profile?.avatar_color || '#65c6ba', online: true }} size={40} />
           <div><strong>{profile?.display_name || '게스트'}</strong><span>{profile ? '@' + profile.handle : '로그인 필요'}</span></div>
@@ -855,6 +857,23 @@ function App() {
             {settingsError ? <p className="auth-error">{settingsError}</p> : null}
             <button className="auth-primary" disabled={!editName.trim()} onClick={saveSettings}>저장</button>
             <button className="settings-logout" onClick={() => { setSettingsOpen(false); logout(); }}><LogOut size={14} /> 로그아웃</button>
+          </div>
+        </div>
+      ) : null}
+
+      {composeOpen ? (
+        <div className="post-modal-backdrop" onClick={() => setComposeOpen(false)}>
+          <div className="post-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="post-modal-top">
+              <span>새 글 쓰기</span>
+              <button className="icon-btn" onClick={() => setComposeOpen(false)} aria-label="닫기"><X size={20} /></button>
+            </div>
+            <div className="compose-modal-body">
+              <textarea className="compose-textarea" value={postText} onChange={(e) => setPostText(e.target.value)} placeholder="무슨 생각을 하고 있나요?" autoFocus />
+              <div className="compose-modal-foot">
+                <button className="publish" disabled={!postText.trim()} onClick={publishPost}>게시하기</button>
+              </div>
+            </div>
           </div>
         </div>
       ) : null}

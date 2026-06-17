@@ -34,6 +34,23 @@ const popularPosts = [
 
 const me = { name: '김지우', handle: '@jiwoo', color: '#65c6ba', online: true };
 
+// 로컬 프로토타입용 소셜 그래프(팔로워/팔로잉 목록). 실제 DB 연동 전 목 데이터.
+const followerPeople = [
+  { id: 'fl1', name: '서윤', handle: '@seoyun', color: '#ffb38c', bio: '사진과 산책을 좋아해요', following: true },
+  { id: 'fl2', name: '민준', handle: '@minjun', color: '#85c7dc', bio: '주말엔 전시 보러 다녀요', following: false },
+  { id: 'fl3', name: '윤서진', handle: '@seojin', color: '#9dc8b4', bio: '동네 이야기를 모읍니다', following: true },
+  { id: 'fl4', name: '한소희', handle: '@sohee', color: '#f0a6b4', bio: '오래 쓰는 물건을 좋아해요', following: false },
+  { id: 'fl5', name: '박도윤', handle: '@doyoon', color: '#91b6d6', bio: '바다 사진 자주 올려요', following: true },
+  { id: 'fl6', name: '문지안', handle: '@jian', color: '#85c7dc', bio: '혼자 걷는 시간을 아껴요', following: false },
+];
+const followingPeople = [
+  { id: 'fg1', name: '오하린', handle: '@harin', color: '#b4a0dc', bio: '요즘 듣는 노래 공유해요', following: true },
+  { id: 'fg2', name: '윤서진', handle: '@seojin', color: '#9dc8b4', bio: '동네 이야기를 모읍니다', following: true },
+  { id: 'fg3', name: '박도윤', handle: '@doyoon', color: '#91b6d6', bio: '바다 사진 자주 올려요', following: true },
+  { id: 'fg4', name: '최유나', handle: '@yuna', color: '#e8a13a', bio: '계절이 바뀌는 길을 좋아해요', following: true },
+  { id: 'fg5', name: '강현우', handle: '@hyunwoo', color: '#7d8fd9', bio: '동네 세탁소 단골', following: true },
+];
+
 const notifications = [
   { id: 1, name: '윤서진', color: '#9dc8b4', icon: Star, tint: '#fff3e6', action: '회원님의 글에 별을 남겼어요.', time: '5분' },
   { id: 2, name: '오하린', color: '#b4a0dc', icon: UserRound, tint: '#eef0ff', action: '회원님을 팔로우하기 시작했어요.', time: '22분' },
@@ -109,8 +126,8 @@ function Avatar({ person, size = 42 }) {
   );
 }
 
-function FollowButton() {
-  const [following, setFollowing] = useState(false);
+function FollowButton({ initialFollowing = false }) {
+  const [following, setFollowing] = useState(initialFollowing);
   return (
     <button className={following ? 'follow-btn following' : 'follow-btn'} onClick={() => setFollowing(!following)}>
       {following ? '팔로잉' : '팔로우'}
@@ -280,6 +297,8 @@ function App() {
   const [postText, setPostText] = useState('');
   const [feedTab, setFeedTab] = useState('추천');
   const [photo, setPhoto] = useState('');
+  const [photoFile, setPhotoFile] = useState(null);
+  const [publishing, setPublishing] = useState(false);
   const [moodOpen, setMoodOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -289,6 +308,8 @@ function App() {
   const [settingsError, setSettingsError] = useState('');
   const [editHandle, setEditHandle] = useState('');
   const [tickerIndex, setTickerIndex] = useState(0);
+  const [profileTab, setProfileTab] = useState('게시물');
+  const [peopleModal, setPeopleModal] = useState(null); // null | '팔로워' | '팔로잉'
 
   useEffect(() => {
     const timer = setInterval(() => setTickerIndex((i) => (i + 1) % popularPosts.length), 3000);
@@ -368,17 +389,37 @@ function App() {
     setMessageText('');
   };
 
+  // 사진을 Supabase Storage(post-images 버킷)에 올리고 공개 URL 반환. 실패 시 null(글은 그대로 게시).
+  const uploadPhoto = async (uid) => {
+    if (!photoFile) return null;
+    const ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${uid}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from('post-images').upload(path, photoFile, {
+      contentType: photoFile.type,
+      upsert: false,
+    });
+    if (error) return null;
+    return supabase.storage.from('post-images').getPublicUrl(path).data.publicUrl;
+  };
+
   const publishPost = async () => {
     const value = postText.trim();
-    if (!value && !photo) return;
+    if (!value && !photoFile) return;
     if (!session) { setComposeOpen(false); setAuthOpen(true); return; }
+    setPublishing(true);
+    const imageUrl = await uploadPhoto(session.user.id);
+    const photoFailed = photoFile && !imageUrl;
     const { error } = await supabase.from('posts').insert({
       author_id: session.user.id,
       body: value || '사진을 공유했어요.',
+      image_url: imageUrl,
     });
-    if (error) { setAuthError(''); alert('게시 중 문제가 발생했어요. 잠시 후 다시 시도해주세요.'); return; }
+    setPublishing(false);
+    if (error) { alert('게시 중 문제가 발생했어요. 잠시 후 다시 시도해주세요.'); return; }
+    if (photoFailed) alert('글은 올라갔지만 사진 업로드에 실패했어요. (Storage 설정 확인 필요)');
     setPostText('');
     setPhoto('');
+    setPhotoFile(null);
     setMoodOpen(false);
     setComposeOpen(false);
     loadPosts(session.user.id);
@@ -386,7 +427,12 @@ function App() {
 
   const choosePhoto = (event) => {
     const file = event.target.files?.[0];
-    if (file) setPhoto(URL.createObjectURL(file));
+    if (!file) return;
+    // 프로토타입 1차 가드. 실서비스용 MIME 재검사·재인코딩·EXIF 제거는 서버에서(SECURITY.md).
+    if (!file.type.startsWith('image/')) { alert('이미지 파일만 올릴 수 있어요.'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('사진은 5MB 이하만 올릴 수 있어요.'); return; }
+    setPhotoFile(file);
+    setPhoto(URL.createObjectURL(file));
   };
 
   const interestOptions = ['일상', '사진', '음악', '책', '영화', '여행', '질문', '취미'];
@@ -634,7 +680,7 @@ function App() {
                   </div>
                 ) : null}
               </div>
-              <button className="publish" onClick={publishPost}>게시하기</button>
+              <button className="publish" disabled={publishing} onClick={publishPost}>{publishing ? '게시 중…' : '게시하기'}</button>
             </div>
           </div>
         </section>
@@ -758,16 +804,26 @@ function App() {
             <p className="profile-bio">조용한 동네 산책과 좋은 대화를 좋아합니다. 작은 순간을 오래 기억하려고 해요.</p>
             <div className="profile-stats">
               <div><strong>{dbPosts.filter((post) => post.own).length}</strong><span>게시물</span></div>
-              <div><strong>128</strong><span>팔로워</span></div>
-              <div><strong>96</strong><span>팔로잉</span></div>
+              <button className="stat-btn" onClick={() => setPeopleModal('팔로워')}><strong>{followerPeople.length}</strong><span>팔로워</span></button>
+              <button className="stat-btn" onClick={() => setPeopleModal('팔로잉')}><strong>{followingPeople.length}</strong><span>팔로잉</span></button>
             </div>
-            <div className="feed-tabs"><button className="selected">게시물</button><button>답글</button><button>별</button></div>
-            {dbPosts.some((post) => post.own) ? (
-              dbPosts.filter((post) => post.own).map((post) => (
-                <Post key={post.id} author={post.author} time={post.time} text={post.text} image={post.image} initialLikes={0} />
-              ))
+            <div className="feed-tabs">
+              {['게시물', '답글', '별'].map((tab) => (
+                <button key={tab} className={profileTab === tab ? 'selected' : ''} onClick={() => setProfileTab(tab)}>{tab}</button>
+              ))}
+            </div>
+            {profileTab === '게시물' ? (
+              dbPosts.some((post) => post.own) ? (
+                dbPosts.filter((post) => post.own).map((post) => (
+                  <Post key={post.id} author={post.author} time={post.time} text={post.text} image={post.image} initialLikes={0} />
+                ))
+              ) : (
+                <p className="empty-note">아직 작성한 게시물이 없어요. 홈에서 첫 글을 남겨보세요.</p>
+              )
+            ) : profileTab === '답글' ? (
+              <p className="empty-note">아직 남긴 답글이 없어요. 마음에 드는 글에 답글을 달아보세요.</p>
             ) : (
-              <p className="empty-note">아직 작성한 게시물이 없어요. 홈에서 첫 글을 남겨보세요.</p>
+              <p className="empty-note">아직 별을 남긴 글이 없어요. 좋은 글에 별을 눌러 모아보세요.</p>
             )}
           </section>
         ) : null}
@@ -926,7 +982,7 @@ function App() {
             <div className="compose-modal-body">
               <textarea className="compose-textarea" value={postText} onChange={(e) => setPostText(e.target.value)} placeholder="무슨 생각을 하고 있나요?" autoFocus />
               <div className="compose-modal-foot">
-                <button className="publish" disabled={!postText.trim()} onClick={publishPost}>게시하기</button>
+                <button className="publish" disabled={!postText.trim() || publishing} onClick={publishPost}>{publishing ? '게시 중…' : '게시하기'}</button>
               </div>
             </div>
           </div>
@@ -934,6 +990,26 @@ function App() {
       ) : null}
 
       {openedPost ? <PostDetail post={openedPost} onClose={() => setOpenedPost(null)} /> : null}
+
+      {peopleModal ? (
+        <div className="post-modal-backdrop" onClick={() => setPeopleModal(null)}>
+          <div className="people-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="post-modal-top">
+              <span>{peopleModal}</span>
+              <button className="icon-btn" onClick={() => setPeopleModal(null)} aria-label="닫기"><X size={20} /></button>
+            </div>
+            <div className="people-modal-list">
+              {(peopleModal === '팔로워' ? followerPeople : followingPeople).map((person) => (
+                <div className="people-modal-row" key={person.id}>
+                  <Avatar person={person} size={42} />
+                  <div><strong>{person.name}</strong><span>{person.handle}</span>{person.bio ? <em>{person.bio}</em> : null}</div>
+                  <FollowButton initialFollowing={peopleModal === '팔로잉' ? true : person.following} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {authOpen ? (
         <div className="auth-backdrop">
